@@ -1,66 +1,66 @@
 const fs = require("fs");
 const { JSDOM } = require("jsdom");
 
-// 1. Read the saved Canvas HTML file
+// Read the Canvas HTML
 const html = fs.readFileSync("assignments.html", "utf8");
 
-// 2. Create a DOM object
+// Create a browser-like window with JSDOM
 const dom = new JSDOM(html);
-const document = dom.window.document;
+const window = dom.window;
 
-// Get current date
+// Load jQuery 4 using its JSDOM factory
+const { jQueryFactory } = require("jquery/factory");
+const $ = jQueryFactory(window);
+
+// Get today's date
 const today = new Date();
 
-// Find all assignments using standard DOM selection
-const assignments = document.querySelectorAll(".ig-title");
+// Find all assignments
+const assignments = $(".ig-title");
 
 console.log("========================================");
-console.log("       CANVAS ASSIGNMENT CHECKER        ");
+console.log("       CANVAS ASSIGNMENT CHECKER");
 console.log("========================================");
 console.log("");
 
-assignments.forEach((assignment) => {
-  // Get assignment title
-  const title = assignment.textContent.trim();
+assignments.each(function () {
+    const assignment = $(this);
 
-  // Get assignment link
-  const link = assignment.getAttribute("href");
+    const title = assignment.text().trim();
+    const link = assignment.attr("href");
+    const container = assignment.closest(".assignment");
 
-  // Find the parent assignment container
-  const container = assignment.closest(".assignment");
+    const dueTime = container
+        .find(".assignment-date-due time")
+        .attr("datetime");
 
-  // Find the due date element inside container
-  const timeElem = container ? container.querySelector(".assignment-date-due time") : null;
-  const dueTime = timeElem ? timeElem.getAttribute("datetime") : null;
+    let status = "";
+    let dueDate = "No due date";
 
-  let status = "";
-  let dueDate = "No due date";
+    if (!dueTime) {
+        status = "NO DATE SET";
+    } else {
+        const due = new Date(dueTime);
+        dueDate = due.toLocaleString();
 
-  // Check and format due date status
-  if (!dueTime) {
-    status = "NO DATE SET";
-  } else {
-    const due = new Date(dueTime);
-    dueDate = due.toLocaleString();
-
-    // Check if assignment has passed
-    if (today > due) {
-      status = "EXPIRED";
+        if (today > due) {
+            status = "EXPIRED";
+        } else if ((due - today) <= 7 * 24 * 60 * 60 * 1000) {
+            status = "DUE SOON";
+        } else {
+            status = "ACTIVE";
+        }
     }
-    // Check if due within 7 days (604800000 ms)
-    else if (due - today <= 604800000) {
-      status = "DUE SOON";
-    }
-    // Otherwise active
-    else {
-      status = "ACTIVE";
-    }
-  }
 
-  // Display summary output
-  console.log("Assignment Title: " + title);
-  console.log("Status: " + status);
-  console.log("Due Date: " + dueDate);
-  console.log("Link: " + (link ? link : "Not available"));
-  console.log("----------------------------------------");
+    console.log("Assignment Title: " + title);
+    console.log("Status: " + status);
+    console.log("Due Date: " + dueDate);
+
+    if (link) {
+        console.log("Link: " + link);
+    } else {
+        console.log("Link: Not available");
+    }
+
+    console.log("----------------------------------------");
 });
